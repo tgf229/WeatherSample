@@ -1,10 +1,14 @@
 package com.tgf.study.weathersample.ui.weather;
 
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.support.v4.view.GravityCompat;
+import android.support.v4.widget.DrawerLayout;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
 import android.util.Log;
@@ -21,6 +25,7 @@ import com.tgf.study.weathersample.R;
 import com.tgf.study.weathersample.bean.weather.ForecastBean;
 import com.tgf.study.weathersample.bean.weather.WeatherBean;
 import com.tgf.study.weathersample.net.HttpUtil;
+import com.tgf.study.weathersample.service.WeatherService;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -32,12 +37,14 @@ import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.Response;
 
-public class WeatherActivity extends AppCompatActivity {
+public class WeatherActivity extends AppCompatActivity implements View.OnClickListener{
     private static final String TAG = "WeatherActivity";
     private TextView city_name,update_time,now_tmp,now_info,aqi,pm,comfort,car;
     private LinearLayout list_layout;
-    private ImageView img_bg;
+    private ImageView img_bg,drawer_btn;
+    public DrawerLayout drawer_layout;
     private SharedPreferences sharef;
+    private  SwipeRefreshLayout swiper_refresh;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -48,7 +55,9 @@ public class WeatherActivity extends AppCompatActivity {
             getWindow().setStatusBarColor(Color.TRANSPARENT);
         }
 
-
+        drawer_layout = (DrawerLayout) findViewById(R.id.drawer_layout);
+        drawer_btn = (ImageView) findViewById(R.id.drawer_btn);
+        drawer_btn.setOnClickListener(this);
         city_name = (TextView) findViewById(R.id.city_name);
         update_time = (TextView) findViewById(R.id.update_time);
         now_tmp = (TextView) findViewById(R.id.now_tmp);
@@ -59,13 +68,19 @@ public class WeatherActivity extends AppCompatActivity {
         car = (TextView) findViewById(R.id.car);
         list_layout = (LinearLayout) findViewById(R.id.list_layout);
         img_bg = (ImageView) findViewById(R.id.img_bg);
+        swiper_refresh = (SwipeRefreshLayout) findViewById(R.id.swiper_refresh);
+        swiper_refresh.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+            @Override
+            public void onRefresh() {
+                requestFromServer(sharef.getString("weatherId","CN101190101"));
+            }
+        });
 
         sharef = PreferenceManager.getDefaultSharedPreferences(WeatherActivity.this);
         String bodyStr = sharef.getString("weather_info",null);
         String picStr = sharef.getString("pic_info",null);
         if (TextUtils.isEmpty(bodyStr)){
-            String url = "http://guolin.tech/api/weather?cityid=CN101190301&key=0550abdf7fc2455ab578e672cb28ee4a";
-            requestFromServer(url);
+            requestFromServer(sharef.getString("weatherId","CN101190101"));
         }else{
             WeatherBean bean = handleResult(bodyStr);
             showView(bean);
@@ -78,6 +93,7 @@ public class WeatherActivity extends AppCompatActivity {
     }
 
     private void showView(WeatherBean bean){
+        list_layout.removeAllViews();
         for (ForecastBean b : bean.getForecastList()) {
             View view = LayoutInflater.from(WeatherActivity.this).inflate(R.layout.activity_weather_forecast_item, list_layout, false);
             TextView item_time = (TextView) view.findViewById(R.id.item_time);
@@ -94,10 +110,19 @@ public class WeatherActivity extends AppCompatActivity {
         update_time.setText(bean.getBasicBean().getUpdate().getUpdateTime().substring(11)+"更新");
         now_tmp.setText(bean.getNowBean().getTmp()+" ℃");
         now_info.setText(bean.getNowBean().getMore().getInfo());
-        aqi.setText(bean.getAqiBean().getCity().getAqi());
-        pm.setText(bean.getAqiBean().getCity().getPm25());
+        if (bean.getAqiBean() != null){
+            aqi.setText(bean.getAqiBean().getCity().getAqi());
+            pm.setText(bean.getAqiBean().getCity().getPm25());
+        }else{
+            aqi.setText("");
+            pm.setText("");
+        }
         comfort.setText("舒适度: "+bean.getSuggestBean().getComfort().getInfo());
         car.setText("洗车建议: "+bean.getSuggestBean().getCarWash().getInfo());
+
+        Intent intent = new Intent(WeatherActivity.this, WeatherService.class);
+        startService(intent);
+
     }
 
     private WeatherBean handleResult(String bodyStr){
@@ -111,8 +136,13 @@ public class WeatherActivity extends AppCompatActivity {
         return bean;
     }
 
-    private void requestFromServer(String url){
-        loadPicFromServer();
+    public void requestFromServer(String weatherId){
+
+        SharedPreferences.Editor editor = sharef.edit();
+        editor.putString("weatherId",weatherId);
+        editor.apply();
+
+        String url = "http://guolin.tech/api/weather?key=0550abdf7fc2455ab578e672cb28ee4a&cityid="+weatherId;
         HttpUtil.sendRequest(url, new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
@@ -120,6 +150,7 @@ public class WeatherActivity extends AppCompatActivity {
                     @Override
                     public void run() {
                         Toast.makeText(WeatherActivity.this,"请求失败",Toast.LENGTH_SHORT).show();
+                        swiper_refresh.setRefreshing(false);
                     }
                 });
             }
@@ -139,6 +170,7 @@ public class WeatherActivity extends AppCompatActivity {
                         @Override
                         public void run() {
                             showView(bean);
+                            swiper_refresh.setRefreshing(false);
                         }
                     });
                 } catch (JSONException e) {
@@ -149,7 +181,7 @@ public class WeatherActivity extends AppCompatActivity {
     }
 
     private void loadPicFromServer(){
-        HttpUtil.sendRequest(HttpUtil.PIC_ADDR, new Callback() {
+        HttpUtil.sendRequest("http://guolin.tech/api/bing_pic", new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
             }
@@ -171,5 +203,14 @@ public class WeatherActivity extends AppCompatActivity {
                 });
             }
         });
+    }
+
+    @Override
+    public void onClick(View v) {
+        switch (v.getId()){
+            case R.id.drawer_btn:
+                drawer_layout.openDrawer(GravityCompat.START);
+                break;
+        }
     }
 }

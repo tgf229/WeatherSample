@@ -11,21 +11,40 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <ScrollView
+    <android.support.v4.widget.DrawerLayout
+        android:id="@+id/drawer_layout"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:fitsSystemWindows="true"
-            tools:context="com.tgf.study.weathersample.ui.weather.WeatherActivity">
 
-            <include layout="@layout/activity_weather_title"/>
-            <include layout="@layout/activity_weather_now"/>
-            <include layout="@layout/activity_weather_forecast"/>
-            <include layout="@layout/activity_weather_aqi"/>
-            <include layout="@layout/activity_weather_suggest"/>
-        </LinearLayout>
-    </ScrollView>
+        <android.support.v4.widget.SwipeRefreshLayout
+            android:id="@+id/swiper_refresh"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+            <ScrollView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:fitsSystemWindows="true"
+                    tools:context="com.tgf.study.weathersample.ui.weather.WeatherActivity">
+
+                    <include layout="@layout/activity_weather_title"/>
+                    <include layout="@layout/activity_weather_now"/>
+                    <include layout="@layout/activity_weather_forecast"/>
+                    <include layout="@layout/activity_weather_aqi"/>
+                    <include layout="@layout/activity_weather_suggest"/>
+                </LinearLayout>
+            </ScrollView>
+        </android.support.v4.widget.SwipeRefreshLayout>
+
+        <fragment
+            android:id="@+id/area_fragment"
+            android:name="com.tgf.study.weathersample.ui.area.AreaFragment"
+            android:layout_gravity="start"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"/>
+
+    </android.support.v4.widget.DrawerLayout>
 </FrameLayout>

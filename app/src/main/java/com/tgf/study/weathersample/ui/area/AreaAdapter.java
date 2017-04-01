@@ -5,11 +5,11 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.tgf.study.weathersample.R;
 import com.tgf.study.weathersample.bean.area.AreaBean;
 import com.tgf.study.weathersample.bean.area.CountyBean;
+import com.tgf.study.weathersample.ui.weather.WeatherActivity;
 
 import java.util.List;
 
@@ -41,7 +41,9 @@ public class AreaAdapter extends RecyclerView.Adapter<AreaAdapter.AreaViewHolder
                     fragment.selectedCity = mList.get(position).getId();
                     fragment.queryCounty();
                 }else if (fragment.CURRENT_LEVEL == fragment.COUNTY_LEVEL){
-                    Toast.makeText(parent.getContext(),((CountyBean)mList.get(position)).getWeatherId(),Toast.LENGTH_SHORT).show();
+                    WeatherActivity act = (WeatherActivity)fragment.getActivity();
+                    act.requestFromServer(((CountyBean)mList.get(position)).getWeatherId());
+                    act.drawer_layout.closeDrawers();
                 }
             }
         });
